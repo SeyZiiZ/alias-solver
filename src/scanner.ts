@@ -16,26 +16,39 @@ function loadGitignorePatterns(rootDir: string): string[] {
   return [...defaults, ...lines];
 }
 
-export async function scanFiles(rootDir: string, targetPath?: string): Promise<string[]> {
+export async function scanFiles(rootDir: string, targetPath?: string, recursive: boolean = true): Promise<string[]> {
   // If targeting a specific file
   if (targetPath) {
-    const resolved = path.resolve(rootDir, targetPath);
+    const resolved = path.resolve(rootDir, targetPath).replace(/\\/g, '/');
     if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
       const ext = path.extname(resolved);
       if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
-        return [resolved.replace(/\\/g, '/')];
+        return [resolved];
       }
       return [];
     }
-    // If it's a directory, use it as the base
+    // If it's a directory
     if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
-      rootDir = resolved;
-    } else {
-      console.error(`Path not found: ${resolved}`);
-      return [];
+      const pattern = recursive
+        ? '**/*.{ts,tsx,js,jsx}'   // all files in all subdirs
+        : '*.{ts,tsx,js,jsx}';     // only direct files in this folder
+
+      const ignorePatterns = loadGitignorePatterns(rootDir);
+      const files = await fg(pattern, {
+        cwd: resolved,
+        ignore: ignorePatterns,
+        absolute: true,
+        onlyFiles: true,
+      });
+
+      return files.map(f => f.replace(/\\/g, '/'));
     }
+
+    console.error(`Path not found: ${resolved}`);
+    return [];
   }
 
+  // No target path: scan entire project recursively
   const ignorePatterns = loadGitignorePatterns(rootDir);
 
   const files = await fg('**/*.{ts,tsx,js,jsx}', {

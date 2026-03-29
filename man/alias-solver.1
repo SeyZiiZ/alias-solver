@@ -1,0 +1,185 @@
+.TH ALIAS\-SOLVER 1 "March 2026" "alias-solver 1.0.0" "User Commands"
+
+.SH NAME
+alias\-solver \- convert relative imports to alias\-based imports and back
+
+.SH SYNOPSIS
+.B alias\-solver
+[\fIOPTIONS\fR]
+
+.SH DESCRIPTION
+.B alias\-solver
+automatically converts relative imports (../../foo) to alias\-based imports (@/foo)
+in JavaScript and TypeScript projects. It can also revert alias imports back to
+relative paths.
+
+The tool auto\-detects alias configuration from \fBtsconfig.json\fR,
+\fBvite.config.ts\fR, or \fBwebpack.config.js\fR. If no configuration is found,
+it scans the source directory (src/, app/, or lib/) and generates aliases
+automatically based on the folder structure, writing them to tsconfig.json.
+
+.SH OPTIONS
+.TP
+.BR \-d ", " \-\-dry\-run
+Preview changes without modifying any files. Shows what would be converted
+with colorized before/after output.
+
+.TP
+.BR \-r ", " \-\-revert
+Revert alias imports back to relative paths. Converts \fB@components/Button\fR
+back to \fB../../components/Button\fR based on the file's location.
+
+.TP
+.BR \-p ", " \-\-path " " \fIPATH\fR
+Target a specific file or directory instead of scanning the entire project.
+When targeting a directory, only files directly inside it are processed (not
+subdirectories). Use \fB\-R\fR to include subdirectories.
+
+.TP
+.BR \-R ", " \-\-recursive
+When used with \fB\-\-path\fR on a directory, process files in all subdirectories
+recursively. Without this flag, only files directly in the target directory are
+processed. Has no effect when \fB\-\-path\fR points to a file or is not specified
+(whole project scans are always recursive).
+
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+
+.TP
+.BR \-v ", " \-\-version
+Display version number and exit.
+
+.SH AUTO\-GENERATION
+When no alias configuration is found, the tool will:
+
+1. Scan top\-level directories in \fBsrc/\fR (or \fBapp/\fR, \fBlib/\fR)
+.br
+2. Generate an alias for each folder (e.g. \fB@components/*\fR \-> \fBsrc/components/*\fR)
+.br
+3. Add a catch\-all \fB@/*\fR \-> \fBsrc/*\fR alias
+.br
+4. Write the aliases to \fBtsconfig.json\fR
+.br
+5. Proceed with the import conversion
+
+Folder names that conflict with npm scopes (e.g. \fBtypes\fR) are skipped as
+dedicated aliases and handled by the catch\-all \fB@/*\fR instead.
+
+.SH CONFIGURATION
+Alias configurations are detected in this priority order:
+
+.TP
+.B 1. tsconfig.json
+Reads \fBcompilerOptions.paths\fR and \fBcompilerOptions.baseUrl\fR.
+Supports \fBextends\fR inheritance and JSONC comments.
+
+.TP
+.B 2. vite.config.ts / vite.config.js
+Reads \fBresolve.alias\fR (object and array forms).
+
+.TP
+.B 3. webpack.config.js / webpack.config.ts
+Reads \fBresolve.alias\fR.
+
+.TP
+.B 4. Auto\-generation
+Falls back to scanning source directories if none of the above are found.
+
+.SH SUPPORTED IMPORT TYPES
+.TP
+.B Static imports
+import { foo } from '../../bar'
+.TP
+.B Side\-effect imports
+import '../../styles.css'
+.TP
+.B Dynamic imports
+const mod = import('../../bar')
+.TP
+.B Require calls
+const foo = require('../../bar')
+.TP
+.B Re\-exports
+export { foo } from '../../bar'
+
+.SH EXAMPLES
+Convert all relative imports to aliases:
+.PP
+.RS
+.B alias\-solver
+.RE
+
+Preview changes without modifying files:
+.PP
+.RS
+.B alias\-solver \-\-dry\-run
+.RE
+
+Revert all alias imports to relative paths:
+.PP
+.RS
+.B alias\-solver \-\-revert
+.RE
+
+Convert only direct files in src/hooks:
+.PP
+.RS
+.B alias\-solver \-\-path src/hooks
+.RE
+
+Convert all files in src/components and its subdirectories:
+.PP
+.RS
+.B alias\-solver \-\-path src/components \-\-recursive
+.RE
+
+Revert only direct files in src/hooks:
+.PP
+.RS
+.B alias\-solver \-\-revert \-\-path src/hooks
+.RE
+
+Revert all files in src/components and subdirectories:
+.PP
+.RS
+.B alias\-solver \-\-revert \-\-path src/components \-\-recursive
+.RE
+
+Preview a scoped revert without modifying anything:
+.PP
+.RS
+.B alias\-solver \-\-revert \-\-dry\-run \-\-path src/components \-R
+.RE
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success (changes applied or nothing to do).
+.TP
+.B 1
+Error (no config found and no source directory, or write failure).
+
+.SH FILES
+.TP
+.B tsconfig.json
+Read for alias paths. Written to when auto\-generating aliases.
+.TP
+.B vite.config.ts / vite.config.js
+Read for resolve.alias configuration.
+.TP
+.B webpack.config.js / webpack.config.ts
+Read for resolve.alias configuration.
+.TP
+.B .gitignore
+Respected when scanning for source files.
+
+.SH BUGS
+Report bugs at https://github.com/SeyZiiZ/alias\-solver/issues
+
+.SH AUTHOR
+SeyZiiZ
+
+.SH SEE ALSO
+.BR tsc (1),
+.BR node (1)

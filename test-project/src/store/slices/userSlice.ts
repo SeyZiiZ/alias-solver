@@ -1,5 +1,5 @@
-import { User } from '@/types';
-import { getUsers, getUserById } from '@lib/api/endpoints/users';
+import { User } from '../../types';
+import { getUsers, getUserById } from '../../lib/api/endpoints/users';
 
 interface UserState {
   users: User[];

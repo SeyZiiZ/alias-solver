@@ -1,9 +1,9 @@
-import { LoginForm } from '@ui/forms/LoginForm';
-import { useAuth } from '@hooks/useAuth';
-import { useTheme } from '@hooks/useTheme';
-import { capitalize } from '@utils/formatting/string';
-import { sendNotification } from '@services/notifications/notificationService';
-import { User } from '@/types';
+import { LoginForm } from '../../../components/ui/forms/LoginForm';
+import { useAuth } from '../../../hooks/useAuth';
+import { useTheme } from '../../../hooks/useTheme';
+import { capitalize } from '../../../utils/formatting/string';
+import { sendNotification } from '../../../services/notifications/notificationService';
+import { User } from '../../../types';
 
 export function LoginPage() {
   const auth = useAuth();
@@ -22,7 +22,7 @@ export function LoginPage() {
 }
 
 // Dynamic import for code splitting
-const dashboardModule = import('@pages/dashboard/Dashboard');
+const dashboardModule = import('../../dashboard/Dashboard');
 
 // Re-export
-export { LoginForm } from '@ui/forms/LoginForm';
+export { LoginForm } from '../../../components/ui/forms/LoginForm';

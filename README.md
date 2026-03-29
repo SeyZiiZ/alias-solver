@@ -1,10 +1,11 @@
 # alias-solver
 
-A CLI tool that automatically converts relative imports (`../../foo`) to alias-based imports (`@/foo`) — and back. It auto-detects your project's alias configuration from `tsconfig.json`, `vite.config`, or `webpack.config`.
+A CLI tool that automatically converts relative imports (`../../foo`) to alias-based imports (`@/foo`) — and back. Works out of the box: auto-detects existing alias configs, or **generates them from your folder structure** if none exist.
 
 ## Features
 
-- **Auto-detection** of alias config from tsconfig / vite / webpack
+- **Zero-config**: no aliases configured? The tool scans your `src/` folders and generates them for you
+- **Auto-detection** of existing alias config from tsconfig / vite / webpack
 - **Converts** relative imports → alias imports
 - **Reverts** alias imports → relative imports (`--revert`)
 - **Dry-run** mode to preview changes before applying
@@ -14,11 +15,32 @@ A CLI tool that automatically converts relative imports (`../../foo`) to alias-b
 - Colorized terminal output showing every change
 - Fully **idempotent** — running twice produces no extra changes
 
+## Quick start
+
+No install needed — just run in your project:
+
+```bash
+npx alias-solver
+```
+
+That's it. If your project has no alias config, the tool will:
+
+1. Scan your `src/` (or `app/`, `lib/`) directory
+2. Generate aliases based on folder names (`@components/*`, `@utils/*`, etc.)
+3. Write them to `tsconfig.json`
+4. Convert all relative imports to alias imports
+
 ## Installation
 
 ```bash
-npm install
-npm run build
+# Use directly (no install)
+npx alias-solver
+
+# Or install globally
+npm install -g alias-solver
+
+# Or install locally in your project
+npm install --save-dev alias-solver
 ```
 
 ## Usage
@@ -27,11 +49,12 @@ npm run build
 alias-solver [options]
 
 Options:
-  -d, --dry-run     Preview changes without modifying files
-  -r, --revert      Revert alias imports back to relative paths
-  -p, --path <p>    Target a specific file or directory
-  -h, --help        Show help
-  -v, --version     Show version
+  -d, --dry-run      Preview changes without modifying files
+  -r, --revert       Revert alias imports back to relative paths
+  -p, --path <p>     Target a specific file or directory
+  -R, --recursive    With --path, include subdirectories (default: direct files only)
+  -h, --help         Show help
+  -v, --version      Show version
 ```
 
 ### Convert relative → alias
@@ -52,59 +75,72 @@ alias-solver --dry-run
 alias-solver --revert
 ```
 
-### Target a specific file or folder
+### Target a specific folder (direct files only)
 
 ```bash
-alias-solver --path src/pages
-alias-solver --path src/components/ui/forms/LoginForm.tsx
+alias-solver --path src/hooks
+# Only processes files directly in src/hooks/ (useAuth.ts, useTheme.ts)
+# Does NOT touch files in subdirectories
+```
+
+### Target a folder recursively
+
+```bash
+alias-solver --path src/components --recursive
+# Processes all files in src/components/ AND all subdirectories
+# (ui/buttons/Button.tsx, layout/sidebar/Sidebar.tsx, etc.)
+```
+
+### Target a single file
+
+```bash
+alias-solver --path src/pages/dashboard/Dashboard.tsx
 ```
 
 ### Combine flags
 
-```bash
-alias-solver --revert --dry-run --path src/pages
-```
-
-## Try it on the test project
-
-A ready-made test project is included with 19 source files across 4 levels of nesting and 10 alias mappings.
-
-### 1. Build the tool
+All flags work together. `--revert` respects `--path` and `--recursive`:
 
 ```bash
-cd d:/aliasSolver
-npm install
-npm run build
+# Revert only direct files in src/hooks/
+alias-solver --revert -p src/hooks
+
+# Revert all files in src/components/ and subdirectories
+alias-solver --revert -p src/components -R
+
+# Preview a scoped revert without modifying anything
+alias-solver --revert --dry-run -p src/components -R
 ```
 
-### 2. Preview what would change
+## How it works
 
-```bash
-cd d:/aliasSolver/test-project
-node ../bin/alias-solver.js --dry-run
+### With existing config
+
+If your project already has aliases defined in `tsconfig.json`, `vite.config`, or `webpack.config`, the tool reads them and converts imports accordingly.
+
+### Without config (auto-generation)
+
+If no aliases are found, the tool scans your source directory and generates them automatically:
+
+```
+src/
+├── components/    →  @components/*
+├── hooks/         →  @hooks/*
+├── lib/           →  @lib/*
+├── pages/         →  @pages/*
+├── services/      →  @services/*
+├── store/         →  @store/*
+├── types/         →  (via catch-all @/*)
+└── utils/         →  @utils/*
+
+Plus catch-all:      @/*  →  src/*
 ```
 
-Expected output — 45 imports across 13 files will be listed, e.g.:
+The generated aliases are written to `tsconfig.json` automatically, then imports are converted.
 
-```
-  src/pages/dashboard/widgets/charts/BarChart.tsx
-    L4: ../../../../lib/api/endpoints/users  ->  @lib/api/endpoints/users
-    L3: ../../../../utils/formatting/string  ->  @utils/formatting/string
-    L2: ../../../../utils/formatting/date    ->  @utils/formatting/date
-    L1: ../../../../types                    ->  @types
-```
+> **Note:** Folder names that conflict with npm scopes (like `types`) are skipped as dedicated aliases and handled by the catch-all `@/*` instead (e.g. `@/types`).
 
-### 3. Apply the conversion
-
-```bash
-node ../bin/alias-solver.js
-```
-
-Now check any file to confirm:
-
-```bash
-cat src/pages/dashboard/Dashboard.tsx
-```
+## Example
 
 Before:
 ```typescript
@@ -121,36 +157,6 @@ import { BarChart } from '@pages/dashboard/widgets/charts/BarChart';
 import { useAuth } from '@hooks/useAuth';
 import { User } from '@/types';
 ```
-
-### 4. Verify idempotence
-
-Running again should find nothing left to convert:
-
-```bash
-node ../bin/alias-solver.js --dry-run
-# => "No relative imports to convert. Everything looks clean!"
-```
-
-### 5. Revert everything back
-
-```bash
-node ../bin/alias-solver.js --revert
-```
-
-All 45 imports are restored to their original relative form. Verify:
-
-```bash
-node ../bin/alias-solver.js --revert --dry-run
-# => "No alias imports to revert. Everything is already relative!"
-```
-
-### 6. Target a specific folder
-
-```bash
-node ../bin/alias-solver.js --path src/pages --dry-run
-```
-
-Only files inside `src/pages/` are scanned.
 
 ## Supported alias configurations
 
@@ -195,50 +201,20 @@ module.exports = {
 };
 ```
 
-The tool checks for configs in this priority order: `tsconfig.json` > `vite.config.{ts,js}` > `webpack.config.{js,ts}`.
+Detection priority: `tsconfig.json` > `vite.config.{ts,js}` > `webpack.config.{js,ts}` > auto-generation from folders.
 
 > **Warning:** Avoid naming an alias `@types/*` — it conflicts with npm's `@types` scope
-> (used for DefinitelyTyped packages like `@types/node`). TypeScript will try to resolve
-> `@types` as a node_modules package, not your alias. Use the catch-all `@/*` instead,
-> which produces `@/types` and works without issues.
+> (used for DefinitelyTyped packages like `@types/node`). Use the catch-all `@/*` instead,
+> which produces `@/types`.
 
-## Test project structure
+## Man page
 
-```
-test-project/
-├── tsconfig.json                                    # 9 alias mappings
-└── src/
-    ├── types/index.ts                               # Shared types
-    ├── hooks/useAuth.ts, useTheme.ts                # Custom hooks
-    ├── utils/formatting/date.ts, string.ts          # Formatting utils
-    ├── utils/constants/index.ts                     # App constants
-    ├── services/auth/authService.ts                 # Auth service
-    ├── services/notifications/notificationService.ts
-    ├── lib/api/endpoints/users.ts                   # API layer
-    ├── lib/api/interceptors/retry.ts
-    ├── store/slices/userSlice.ts                    # State management
-    ├── components/ui/buttons/Button.tsx              # UI components
-    ├── components/ui/forms/LoginForm.tsx
-    ├── components/ui/forms/validation/rules.ts       # 4 levels deep
-    ├── components/layout/sidebar/Sidebar.tsx
-    ├── components/layout/sidebar/items/NavItem.tsx   # 4 levels deep
-    ├── pages/dashboard/Dashboard.tsx                 # Pages
-    ├── pages/dashboard/widgets/charts/BarChart.tsx   # 4 levels deep
-    └── pages/auth/login/LoginPage.tsx
+After installing globally, you can view the manual:
+
+```bash
+man alias-solver
 ```
 
-Alias mappings configured in the test project:
+## License
 
-| Alias | Target |
-|-------|--------|
-| `@/*` | `src/*` |
-| `@components/*` | `src/components/*` |
-| `@ui/*` | `src/components/ui/*` |
-| `@pages/*` | `src/pages/*` |
-| `@utils/*` | `src/utils/*` |
-| `@hooks/*` | `src/hooks/*` |
-| `@lib/*` | `src/lib/*` |
-| `@services/*` | `src/services/*` |
-| `@store/*` | `src/store/*` |
-
-> Types are resolved via the catch-all `@/*` → `@/types` (no dedicated `@types` alias to avoid npm scope conflict).
+MIT

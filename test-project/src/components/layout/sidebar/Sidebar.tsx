@@ -1,6 +1,6 @@
-import { NavItem } from '@components/layout/sidebar/items/NavItem';
-import { useTheme } from '@hooks/useTheme';
-import { User } from '@/types';
+import { NavItem } from './items/NavItem';
+import { useTheme } from '../../../hooks/useTheme';
+import { User } from '../../../types';
 
 interface SidebarProps {
   user: User;

@@ -1,6 +1,6 @@
-import { User, ApiResponse } from '@/types';
-import { API_BASE_URL, MAX_RETRIES } from '@utils/constants';
-import { withRetry } from '@lib/api/interceptors/retry';
+import { User, ApiResponse } from '../../../types';
+import { API_BASE_URL, MAX_RETRIES } from '../../../utils/constants';
+import { withRetry } from '../interceptors/retry';
 
 export async function getUsers(): Promise<User[]> {
   return withRetry(async () => {

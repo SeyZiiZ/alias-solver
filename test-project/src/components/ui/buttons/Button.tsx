@@ -1,4 +1,4 @@
-import { capitalize } from '@utils/formatting/string';
+import { capitalize } from '../../../utils/formatting/string';
 
 interface ButtonProps {
   label: string;

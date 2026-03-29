@@ -1,5 +1,5 @@
-import { User } from '@/types';
-import { login, logout } from '@services/auth/authService';
+import { User } from '../types';
+import { login, logout } from '../services/auth/authService';
 
 export function useAuth() {
   let currentUser: User | null = null;

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parseCli, printHelp, printVersion } from './cli';
-import { detectConfig, sortAliasesBySpecificity } from './detector';
+import { detectConfig, sortAliasesBySpecificity, generateAliasesFromStructure, writeAliasesToTsConfig } from './detector';
 import { scanFiles } from './scanner';
 import { parseImports, getLineNumber } from './parser';
 import { resolveImportToAlias, resolveAliasToRelative } from './resolver';
@@ -31,15 +31,41 @@ async function main() {
   // Step 1: Detect config
   console.log(`\n${BOLD}alias-solver${RESET} ${DIM}v1.0.0${RESET}\n`);
 
-  const config = detectConfig(rootDir);
+  let config = detectConfig(rootDir);
 
   if (config.configSource === 'none' || config.aliases.length === 0) {
-    console.error(`${YELLOW}No alias configuration found.${RESET}`);
-    console.error('Ensure your project has one of:');
-    console.error('  - tsconfig.json with compilerOptions.paths');
-    console.error('  - vite.config.ts/js with resolve.alias');
-    console.error('  - webpack.config.js with resolve.alias');
-    process.exit(1);
+    // Auto-generate aliases from folder structure
+    const generated = generateAliasesFromStructure(rootDir);
+
+    if (generated.length === 0) {
+      console.error(`${YELLOW}No alias configuration found and no src/ directory detected.${RESET}`);
+      console.error('Ensure your project has one of:');
+      console.error('  - tsconfig.json with compilerOptions.paths');
+      console.error('  - vite.config.ts/js with resolve.alias');
+      console.error('  - webpack.config.js with resolve.alias');
+      console.error('  - A src/, app/, or lib/ directory (for auto-generation)');
+      process.exit(1);
+    }
+
+    console.log(`${YELLOW}No alias config found — auto-generating from folder structure:${RESET}\n`);
+
+    for (const a of generated) {
+      const displayAlias = a.alias.endsWith('/') ? a.alias + '*' : a.alias;
+      const relTarget = path.relative(rootDir, a.targets[0]).replace(/\\/g, '/');
+      console.log(`  ${CYAN}${displayAlias}${RESET} ${DIM}-> ${relTarget}${RESET}`);
+    }
+
+    // Write to tsconfig.json
+    const configPath = writeAliasesToTsConfig(rootDir, generated);
+    console.log(`\n${GREEN}Wrote aliases to ${path.relative(rootDir, configPath).replace(/\\/g, '/')}${RESET}\n`);
+
+    // Re-detect with the newly written config
+    config = detectConfig(rootDir);
+
+    if (config.aliases.length === 0) {
+      console.error(`${YELLOW}Failed to read back generated config.${RESET}`);
+      process.exit(1);
+    }
   }
 
   const relConfigPath = path.relative(rootDir, config.configPath).replace(/\\/g, '/');
@@ -49,13 +75,17 @@ async function main() {
   console.log(`${DIM}Aliases:${RESET} ${config.aliases.map(a => `${CYAN}${a.alias}${RESET}${DIM} -> ${a.targets[0]}${RESET}`).join(', ')}`);
 
   // Step 2: Scan files
-  const files = await scanFiles(rootDir, options.path);
+  const files = await scanFiles(rootDir, options.path, options.path ? options.recursive : true);
 
   if (files.length === 0) {
     console.log(`\n${YELLOW}No source files found.${RESET}`);
     return;
   }
 
+  if (options.path) {
+    const scope = options.recursive ? 'recursive' : 'direct files only';
+    console.log(`${DIM}Path:${RESET}    ${options.path} ${DIM}(${scope})${RESET}`);
+  }
   console.log(`${DIM}Files:${RESET}   ${files.length} source file(s)\n`);
 
   if (options.dryRun) {

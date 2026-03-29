@@ -210,6 +210,84 @@ export function sortAliasesBySpecificity(aliases: AliasMapping[]): AliasMapping[
   });
 }
 
+// Reserved npm scopes that should not be used as alias names
+const RESERVED_ALIAS_NAMES = new Set(['types', 'type']);
+
+export function generateAliasesFromStructure(rootDir: string): AliasMapping[] {
+  // Find the source root: src/, app/, or lib/
+  const candidates = ['src', 'app', 'lib'];
+  let sourceRoot = '';
+
+  for (const dir of candidates) {
+    const full = path.join(rootDir, dir);
+    if (fs.existsSync(full) && fs.statSync(full).isDirectory()) {
+      sourceRoot = dir;
+      break;
+    }
+  }
+
+  if (!sourceRoot) return [];
+
+  const sourceDir = path.join(rootDir, sourceRoot);
+  const aliases: AliasMapping[] = [];
+
+  // Always add catch-all @/* -> src/*
+  aliases.push({
+    alias: '@/',
+    targets: [normalizePath(sourceDir)],
+  });
+
+  // Scan top-level directories in source root
+  const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+
+    // Skip reserved names that conflict with npm scopes
+    if (RESERVED_ALIAS_NAMES.has(entry.name)) continue;
+
+    const alias = `@${entry.name}/`;
+    const target = normalizePath(path.join(sourceDir, entry.name));
+    aliases.push({ alias, targets: [target] });
+  }
+
+  return aliases;
+}
+
+export function writeAliasesToTsConfig(rootDir: string, aliases: AliasMapping[]): string {
+  const tsconfigPath = path.join(rootDir, 'tsconfig.json');
+
+  let config: any = {};
+  if (fs.existsSync(tsconfigPath)) {
+    try {
+      config = readJsonc(tsconfigPath);
+    } catch {
+      config = {};
+    }
+  }
+
+  if (!config.compilerOptions) config.compilerOptions = {};
+  if (!config.compilerOptions.baseUrl) config.compilerOptions.baseUrl = '.';
+
+  // Build paths object from aliases
+  const paths: Record<string, string[]> = {};
+  for (const { alias, targets } of aliases) {
+    const isExact = !alias.endsWith('/');
+    const pattern = isExact ? alias : alias + '*';
+    const targetPaths = targets.map(t => {
+      let rel = normalizePath(path.relative(rootDir, t));
+      return isExact ? rel : rel + '/*';
+    });
+    paths[pattern] = targetPaths;
+  }
+
+  config.compilerOptions.paths = paths;
+
+  fs.writeFileSync(tsconfigPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  return tsconfigPath;
+}
+
 export function detectConfig(rootDir: string): ProjectConfig {
   const none: ProjectConfig = { rootDir, configSource: 'none', configPath: '', aliases: [] };
 

@@ -11,9 +11,11 @@
     "dev": "tsc --watch",
     "prepublishOnly": "npm run build"
   },
+  "man": "./man/alias-solver.1",
   "files": [
     "dist",
     "bin",
+    "man",
     "README.md"
   ],
   "keywords": [

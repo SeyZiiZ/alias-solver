@@ -1,11 +1,11 @@
-import { Sidebar } from '@components/layout/sidebar/Sidebar';
-import { BarChart } from '@pages/dashboard/widgets/charts/BarChart';
-import { useAuth } from '@hooks/useAuth';
-import { useTheme } from '@hooks/useTheme';
-import { fetchUsers, getState } from '@store/slices/userSlice';
-import { User } from '@/types';
-import { formatDateTime } from '@utils/formatting/date';
-import { sendNotification } from '@services/notifications/notificationService';
+import { Sidebar } from '../../components/layout/sidebar/Sidebar';
+import { BarChart } from './widgets/charts/BarChart';
+import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
+import { fetchUsers, getState } from '../../store/slices/userSlice';
+import { User } from '../../types';
+import { formatDateTime } from '../../utils/formatting/date';
+import { sendNotification } from '../../services/notifications/notificationService';
 
 export function Dashboard() {
   const auth = useAuth();

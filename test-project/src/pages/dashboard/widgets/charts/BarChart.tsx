@@ -1,7 +1,7 @@
-import { User } from '@/types';
-import { formatDate } from '@utils/formatting/date';
-import { capitalize } from '@utils/formatting/string';
-import { getUsers } from '@lib/api/endpoints/users';
+import { User } from '../../../../types';
+import { formatDate } from '../../../../utils/formatting/date';
+import { capitalize } from '../../../../utils/formatting/string';
+import { getUsers } from '../../../../lib/api/endpoints/users';
 
 interface BarChartProps {
   title: string;

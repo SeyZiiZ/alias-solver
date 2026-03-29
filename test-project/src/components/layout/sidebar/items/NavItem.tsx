@@ -1,6 +1,6 @@
-import { capitalize } from '@utils/formatting/string';
-import { slugify } from '@utils/formatting/string';
-import { Theme } from '@/types';
+import { capitalize } from '../../../../utils/formatting/string';
+import { slugify } from '../../../../utils/formatting/string';
+import { Theme } from '../../../../types';
 
 interface NavItemProps {
   label: string;

@@ -1,8 +1,8 @@
-import { required, isEmail, minLength } from '@ui/forms/validation/rules';
-import { Button } from '@ui/buttons/Button';
-import { useAuth } from '@hooks/useAuth';
-import { capitalize } from '@utils/formatting/string';
-import { User } from '@/types';
+import { required, isEmail, minLength } from './validation/rules';
+import { Button } from '../buttons/Button';
+import { useAuth } from '../../../hooks/useAuth';
+import { capitalize } from '../../../utils/formatting/string';
+import { User } from '../../../types';
 
 export function LoginForm() {
   const auth = useAuth();

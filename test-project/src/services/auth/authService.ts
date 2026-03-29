@@ -1,5 +1,5 @@
-import { User, ApiResponse } from '@/types';
-import { API_BASE_URL } from '@utils/constants';
+import { User, ApiResponse } from '../../types';
+import { API_BASE_URL } from '../../utils/constants';
 
 export async function login(email: string, password: string): Promise<User> {
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
