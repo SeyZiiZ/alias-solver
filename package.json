@@ -1,6 +1,6 @@
 {
   "name": "alias-solver",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Convert relative imports to alias-based imports automatically — and back. Auto-detects tsconfig, vite, and webpack alias configs.",
   "bin": {
     "alias-solver": "bin/alias-solver.js"
